@@ -1,0 +1,104 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audio Extracter</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; min-height: 100vh;
+      display: grid; place-items: center;
+      font: 16px system-ui, sans-serif;
+      background: #f3f5f8; color: #172033;
+    }
+    main {
+      width: 100%; max-width: 480px; padding: 28px;
+      background: white; border-radius: 20px;
+      box-shadow: 0 12px 40px #17203312;
+    }
+    h1 { margin: 0 0 8px; }
+    p { color: #596579; line-height: 1.5; }
+    label { display: block; margin-top: 18px; font-weight: 600; }
+    input, button {
+      width: 100%; margin-top: 8px; padding: 13px;
+      border: 1px solid #d6dce5; border-radius: 10px;
+      font: inherit;
+    }
+    button {
+      margin-top: 22px; border: 0; background: #245be8;
+      color: white; font-weight: 700; cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #status { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>🎵 Audio Extracter</h1>
+    <p>Turn a YouTube video into an MP3 you can download.</p>
+
+    <form id="form">
+      <label for="url">YouTube video link</label>
+      <input id="url" type="url" required
+             placeholder="https://www.youtube.com/watch?v=..."
+             autocomplete="url">
+
+      <label for="start">Start time (optional)</label>
+      <input id="start" placeholder="e.g. 1:20">
+
+      <label for="end">End time (optional)</label>
+      <input id="end" placeholder="e.g. 3:45">
+
+      <button id="submit" type="submit">Extract and download MP3</button>
+    </form>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <script>
+      const form = document.querySelector("#form");
+      const button = document.querySelector("#submit");
+      const status = document.querySelector("#status");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        status.textContent = "Preparing your audio. This may take a few minutes.";
+
+        try {
+          const response = await fetch("/api/download", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              url: document.querySelector("#url").value.trim(),
+              start: document.querySelector("#start").value.trim(),
+              end: document.querySelector("#end").value.trim()
+            })
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Something went wrong.");
+          }
+
+          const blob = await response.blob();
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.download = "dadtube-audio.mp3";
+          link.click();
+          URL.revokeObjectURL(downloadUrl);
+          status.textContent = "Your download is ready!";
+        } catch (error) {
+          status.textContent = error.message || "Download failed.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </main>
+</body>
+</html>
